@@ -46,16 +46,20 @@ int main(void) {
       else if (event.type == SDL_KEYDOWN) {
         switch (event.key.keysym.sym) {
           case SDLK_w:
-            s->direction = Up;
+            if (s->direction != Down)
+              s->direction = Up;
             break;
           case SDLK_a:
-            s->direction = Left;
+            if (s->direction != Right)
+              s->direction = Left;
             break;
           case SDLK_s:
-            s->direction = Down;
+            if (s->direction != Up)
+              s->direction = Down;
             break;
           case SDLK_d:
-            s->direction = Right;
+            if (s->direction != Left)
+              s->direction = Right;
             break;
         }
       }

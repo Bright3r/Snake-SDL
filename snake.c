@@ -47,7 +47,8 @@ void updateSnakePosition(snake *s) {
   switch (s->direction) {
     case Up:
       s->y += -SNAKE_WIDTH;
-      break; case Down:
+      break; 
+    case Down:
       s->y += SNAKE_WIDTH;
       break;
     case Left:
