@@ -1,8 +1,17 @@
 #include "main.h"
 
 int main(void) {
-  if (SDL_Init(SDL_INIT_VIDEO) > 0) {
+  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     fprintf(stderr, "SDL_Init has failed: %s\n", SDL_GetError());
+  }
+
+  if (TTF_Init() < 0) {
+    fprintf(stderr, "TTF_Init has failed: %s\n", TTF_GetError());
+  }
+
+  TTF_Font *font = TTF_OpenFont("./assets/fonts/PixelifySans-VariableFont_wght.ttf", 24);
+  if (font == NULL) {
+    fprintf(stderr, "Failed to open font: %s\n", TTF_GetError());
   }
 
   int windowWidth = GRID_ROW_SIZE * SNAKE_WIDTH;
@@ -71,8 +80,11 @@ int main(void) {
 
     // Draw updated objects
     refreshScreen(renderer);
-    drawSnake(renderer, s);
     drawApple(renderer, app);
+    drawSnake(renderer, s);
+
+    SDL_Color color = {255, 255, 255, 255};
+    drawScore(renderer, font, color, windowWidth, score);
 
     SDL_RenderPresent(renderer);
 
@@ -91,4 +103,20 @@ int main(void) {
 void refreshScreen(SDL_Renderer *renderer) {
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
   SDL_RenderClear(renderer);
+}
+
+void drawScore(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int windowWidth, int score) {
+  // Get string of score
+  char scoreText[12] = {0};
+  sprintf(scoreText, "Score: %d", score);
+
+  SDL_Surface *text_surface = TTF_RenderText_Solid(font, scoreText, color);
+  SDL_Texture *text = SDL_CreateTextureFromSurface(renderer, text_surface);
+
+  int midpoint = (windowWidth - text_surface->w) / 2;
+  SDL_Rect dest = {midpoint, text_surface->h, text_surface->w, text_surface->h};
+  SDL_RenderCopy(renderer, text, NULL, &dest);
+
+  SDL_DestroyTexture(text);
+  SDL_FreeSurface(text_surface);
 }
