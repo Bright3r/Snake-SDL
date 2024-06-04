@@ -4,7 +4,7 @@
 
 
 typedef struct queue {
-  size_t size;
+  int size;
   struct node *head;
   struct node *tail;
 } queue;

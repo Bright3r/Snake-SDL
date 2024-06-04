@@ -62,3 +62,34 @@ void updateSnakePosition(snake *s) {
 SDL_Rect *getSnakeHead(snake *s) {
   return (SDL_Rect *) s->body->tail->data;
 }
+
+struct node *getSnakeTailNode(snake *s) {
+  return s->body->head;
+}
+
+bool checkSnakeBorderCollision(snake *s, int gridRowSize) {
+  int max_x = gridRowSize * SNAKE_WIDTH;
+  int max_y = max_x;
+
+  if ((s->x + SNAKE_WIDTH) > max_x || (s->y + SNAKE_WIDTH) > max_y
+    || s->x < 0 || s->y < 0) {
+    return true;
+  }
+  return false;
+}
+
+bool checkSnakeSelfCollision(snake *s) {
+  SDL_Rect *snakeHead = getSnakeHead(s);
+  struct node *snakeBodySegment = getSnakeTailNode(s);
+
+  // Iterate through all body rects and check if head is colliding
+  for (int i = 1; i < s->body->size; i++) {
+    if (checkCollision(snakeHead, (SDL_Rect *) snakeBodySegment->data)) {
+      return true;
+    }
+
+    snakeBodySegment = snakeBodySegment->next;
+  }
+
+  return false;
+}

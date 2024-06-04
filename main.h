@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "queue.c"
+#include "utils.c"
 #include "apple.c"
 #include "snake.c"
 
@@ -13,6 +14,5 @@
 #define FRAME_INTERVAL 100.0f
 
 void refreshScreen(SDL_Renderer *renderer);
-bool checkCollision(SDL_Rect *r1, SDL_Rect *r2);
 
 #endif

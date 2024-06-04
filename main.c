@@ -52,6 +52,12 @@ int main(void) {
 
     updateSnakePosition(s);
 
+    // Check if snake is colliding with border or with self
+    if (checkSnakeBorderCollision(s, GRID_ROW_SIZE) || checkSnakeSelfCollision(s)) {
+      isGameRunning = false;
+    }
+
+    // Check if snake is colliding with apple
     if (checkCollision(getSnakeHead(s), app)) {
       growSnakeBody(s);
       score++;
@@ -86,20 +92,3 @@ void refreshScreen(SDL_Renderer *renderer) {
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
   SDL_RenderClear(renderer);
 }
-
-bool checkCollision(SDL_Rect *r1, SDL_Rect *r2) {
-  // Axis Aligned Bounding Box
-  // Check if one rectangle is absolutely left of the other
-  if ((r1->x + r1->w) <= r2->x || (r2->x + r2->w) <= r1->x) {
-    return false;
-  }
-
-  // Check if one rectangle is absolutely above the other
-  if ((r1->y + r1->h) <= r2->y || (r2->y + r2->h) <= r1->y) {
-    return false;
-  }
-
-  // Otherwise there is a collision
-  return true;
-}
-
