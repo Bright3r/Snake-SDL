@@ -5,7 +5,8 @@ int main(void) {
     fprintf(stderr, "SDL_Init has failed: %s\n", SDL_GetError());
   }
 
-  SDL_Window *window = SDL_CreateWindow("Snake", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 400, 400, SDL_WINDOW_SHOWN);
+  int windowWidth = GRID_ROW_SIZE * SNAKE_WIDTH;
+  SDL_Window *window = SDL_CreateWindow("Snake", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth,windowWidth, SDL_WINDOW_SHOWN);
   if (window == NULL) {
     fprintf(stderr, "Failed to create window: %s\n", SDL_GetError());
   }
@@ -15,13 +16,11 @@ int main(void) {
     fprintf(stderr, "Failed to render window: %s\n", SDL_GetError());
   }
 
-  snake *s = createSnake(50, 50);
-
   bool isGameRunning = true;
   SDL_Event event;
+  snake *s = createSnake(50, 50);
   while (isGameRunning) {
-    refreshScreen(renderer);
-    drawSnake(renderer, s);
+    uint32_t startTime = SDL_GetTicks();
 
     // handle input
     while (SDL_PollEvent(&event) != 0) {
@@ -46,9 +45,14 @@ int main(void) {
       }
     }
 
-    updateSnake(s);
+    updateSnakePosition(s);
 
-    SDL_Delay(16.667f); // 60fps
+    refreshScreen(renderer);
+    drawSnake(renderer, s);
+
+    uint32_t currTime = SDL_GetTicks();
+    float elapsedTime = currTime - startTime;
+    SDL_Delay(floor(FRAME_INTERVAL - elapsedTime)); // cap framerate
   }
 
   SDL_DestroyRenderer(renderer);

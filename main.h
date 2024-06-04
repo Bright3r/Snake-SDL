@@ -8,6 +8,9 @@
 #include "queue.c"
 #include "snake.c"
 
+#define GRID_ROW_SIZE 20
+#define FRAME_INTERVAL 200.0f
+
 void refreshScreen(SDL_Renderer *renderer);
 
 #endif

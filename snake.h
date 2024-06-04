@@ -5,7 +5,7 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 
-#define SNAKE_WIDTH 10
+#define SNAKE_WIDTH 25
 
 enum directions {Up, Down, Left, Right};
 
