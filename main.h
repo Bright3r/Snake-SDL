@@ -17,5 +17,6 @@
 
 void refreshScreen(SDL_Renderer *renderer);
 void drawScore(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int windowWidth, int score);
+void drawGrid(SDL_Renderer *renderer, int windowWidth);
 
 #endif

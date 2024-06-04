@@ -15,7 +15,7 @@ int main(void) {
   }
 
   int windowWidth = GRID_ROW_SIZE * SNAKE_WIDTH;
-  SDL_Window *window = SDL_CreateWindow("Snake", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth,windowWidth, SDL_WINDOW_SHOWN);
+  SDL_Window *window = SDL_CreateWindow("Snake", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowWidth, SDL_WINDOW_SHOWN);
   if (window == NULL) {
     fprintf(stderr, "Failed to create window: %s\n", SDL_GetError());
   }
@@ -82,6 +82,7 @@ int main(void) {
     refreshScreen(renderer);
     drawApple(renderer, app);
     drawSnake(renderer, s);
+    drawGrid(renderer, windowWidth);
 
     SDL_Color color = {255, 255, 255, 255};
     drawScore(renderer, font, color, windowWidth, score);
@@ -101,7 +102,7 @@ int main(void) {
 }
 
 void refreshScreen(SDL_Renderer *renderer) {
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  SDL_SetRenderDrawColor(renderer, 148, 148, 184, 255);
   SDL_RenderClear(renderer);
 }
 
@@ -119,4 +120,19 @@ void drawScore(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int wind
 
   SDL_DestroyTexture(text);
   SDL_FreeSurface(text_surface);
+}
+
+void drawGrid(SDL_Renderer *renderer, int windowWidth) {
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  
+  for (int x = 0; x < windowWidth; x += SNAKE_WIDTH) {
+    int y = x;
+    SDL_RenderDrawLine(renderer, x, 0, x, windowWidth); // Vertical lines
+    SDL_RenderDrawLine(renderer, 0, y, windowWidth, y); // Horizontal lines
+  }
+  
+  // Draw Outer Perimeter of grid
+  windowWidth--;  // Set to last visible pixel of window
+  SDL_RenderDrawLine(renderer, windowWidth, 0, windowWidth, windowWidth);
+  SDL_RenderDrawLine(renderer, 0, windowWidth, windowWidth, windowWidth);
 }
