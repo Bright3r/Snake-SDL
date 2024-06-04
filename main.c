@@ -16,6 +16,8 @@ int main(void) {
     fprintf(stderr, "Failed to render window: %s\n", SDL_GetError());
   }
 
+  SDL_Rect ex = {100, 100, 50, 50};
+
   bool isGameRunning = true;
   SDL_Event event;
   snake *s = createSnake(50, 50);
@@ -49,6 +51,19 @@ int main(void) {
 
     refreshScreen(renderer);
     drawSnake(renderer, s);
+    
+
+    if (checkCollision(getSnakeHead(s), &ex)) {
+      SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    }
+    else {
+      SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+    }
+    SDL_RenderFillRect(renderer, &ex);
+
+
+    SDL_RenderPresent(renderer);
+
 
     uint32_t currTime = SDL_GetTicks();
     float elapsedTime = currTime - startTime;
@@ -67,6 +82,18 @@ void refreshScreen(SDL_Renderer *renderer) {
 }
 
 
-// bool checkCollision(SDL_Rect *r1, SDL_Rect *r2) {
-//
-// }
+bool checkCollision(SDL_Rect *r1, SDL_Rect *r2) {
+  // Axis Aligned Bounding Box
+  // Check if one rectangle is absolutely left of the other
+  if ((r1->x + r1->w) <= r2->x || (r2->x + r2->w) <= r1->x) {
+    return false;
+  }
+
+  // Check if one rectangle is absolutely above the other
+  if ((r1->y + r1->h) <= r2->y || (r2->y + r2->h) <= r1->y) {
+    return false;
+  }
+
+  // Otherwise there is a collision
+  return true;
+}

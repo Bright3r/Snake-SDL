@@ -12,5 +12,6 @@
 #define FRAME_INTERVAL 200.0f
 
 void refreshScreen(SDL_Renderer *renderer);
+bool checkCollision(SDL_Rect *r1, SDL_Rect *r2);
 
 #endif

@@ -26,8 +26,6 @@ void drawSnake(SDL_Renderer *renderer, snake *s) {
 
     curr = curr->next;
   }
-
-  SDL_RenderPresent(renderer);
 }
 
 void growSnakeBody(snake *s) {
@@ -61,4 +59,8 @@ void updateSnakePosition(snake *s) {
   }
 
   moveSnake(s);
+}
+
+SDL_Rect *getSnakeHead(snake *s) {
+  return (SDL_Rect *) s->body->head->data;
 }
