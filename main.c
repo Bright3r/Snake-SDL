@@ -16,11 +16,14 @@ int main(void) {
     fprintf(stderr, "Failed to render window: %s\n", SDL_GetError());
   }
 
-  SDL_Rect ex = {100, 100, 50, 50};
+  // Initialize game objects
+  snake *s = createSnake(50, 50);
+  apple *app = createApple(GRID_ROW_SIZE, SNAKE_WIDTH);
+  int score = 0;
 
+  // Game Loop
   bool isGameRunning = true;
   SDL_Event event;
-  snake *s = createSnake(50, 50);
   while (isGameRunning) {
     uint32_t startTime = SDL_GetTicks();
 
@@ -49,25 +52,28 @@ int main(void) {
 
     updateSnakePosition(s);
 
-    refreshScreen(renderer);
-    drawSnake(renderer, s);
-    
+    if (checkCollision(getSnakeHead(s), app)) {
+      growSnakeBody(s);
+      score++;
+      printf("Score: %d\n", score);
 
-    if (checkCollision(getSnakeHead(s), &ex)) {
-      SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+      moveApple(app, GRID_ROW_SIZE, SNAKE_WIDTH);
     }
     else {
-      SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+      moveSnake(s);
     }
-    SDL_RenderFillRect(renderer, &ex);
 
+    // Draw updated objects
+    refreshScreen(renderer);
+    drawSnake(renderer, s);
+    drawApple(renderer, app);
 
     SDL_RenderPresent(renderer);
 
-
+    // Cap Framerate
     uint32_t currTime = SDL_GetTicks();
     float elapsedTime = currTime - startTime;
-    SDL_Delay(floor(FRAME_INTERVAL - elapsedTime)); // cap framerate
+    SDL_Delay(floor(FRAME_INTERVAL - elapsedTime));
   }
 
   SDL_DestroyRenderer(renderer);
@@ -80,7 +86,6 @@ void refreshScreen(SDL_Renderer *renderer) {
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
   SDL_RenderClear(renderer);
 }
-
 
 bool checkCollision(SDL_Rect *r1, SDL_Rect *r2) {
   // Axis Aligned Bounding Box
@@ -97,3 +102,4 @@ bool checkCollision(SDL_Rect *r1, SDL_Rect *r2) {
   // Otherwise there is a collision
   return true;
 }
+

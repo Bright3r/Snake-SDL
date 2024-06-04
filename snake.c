@@ -57,10 +57,8 @@ void updateSnakePosition(snake *s) {
       s->x += SNAKE_WIDTH;
       break;
   }
-
-  moveSnake(s);
 }
 
 SDL_Rect *getSnakeHead(snake *s) {
-  return (SDL_Rect *) s->body->head->data;
+  return (SDL_Rect *) s->body->tail->data;
 }
