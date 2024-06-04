@@ -1,10 +1,13 @@
 #include "main.h"
 
 int main(void) {
+  // Initialize SDL2
+  // Video
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     fprintf(stderr, "SDL_Init has failed: %s\n", SDL_GetError());
   }
 
+  // Fonts
   if (TTF_Init() < 0) {
     fprintf(stderr, "TTF_Init has failed: %s\n", TTF_GetError());
   }
@@ -13,6 +16,33 @@ int main(void) {
   if (font == NULL) {
     fprintf(stderr, "Failed to open font: %s\n", TTF_GetError());
   }
+
+  // Audio
+  if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 1, 1024) < 0) {
+    fprintf(stderr, "SDL_Mixer has failed: %s\n", Mix_GetError());
+  }
+
+  // Play background music
+  Mix_Music *music = Mix_LoadMUS("./assets/sounds/music.mp3");
+  if (music == NULL) {
+    fprintf(stderr, "Failed to load music: %s\n", Mix_GetError());
+  }
+  else if (Mix_PlayMusic(music, -1) < 0) {
+    fprintf(stderr, "Failed to play music: %s\n", Mix_GetError());
+  }
+
+  // Load Sound Effects
+  Mix_Chunk *chompSound = Mix_LoadWAV("./assets/sounds/chomp.mp3");
+  if (chompSound == NULL) {
+    fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
+  }
+
+  Mix_Chunk *deathSound = Mix_LoadWAV("./assets/sounds/death.mp3");
+  if (deathSound == NULL) {
+    fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
+  }
+
+
 
   int windowWidth = GRID_ROW_SIZE * SNAKE_WIDTH;
   SDL_Window *window = SDL_CreateWindow("Snake", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowWidth, SDL_WINDOW_SHOWN);
@@ -70,14 +100,15 @@ int main(void) {
     // Check if snake is colliding with border or with self
     if (checkSnakeBorderCollision(s, GRID_ROW_SIZE) || checkSnakeSelfCollision(s)) {
       isGameRunning = false;
+      int channel = Mix_PlayChannel(-1, deathSound, 0); // Death sound
     }
 
     // Check if snake is colliding with apple
     if (checkCollision(getSnakeHead(s), app)) {
       growSnakeBody(s);
       score++;
-      printf("Score: %d\n", score);
 
+      int channel = Mix_PlayChannel(-1, chompSound, 0);
       moveApple(app, GRID_ROW_SIZE, SNAKE_WIDTH);
     }
     else {
@@ -103,8 +134,16 @@ int main(void) {
 
   endScreen(renderer, font, windowWidth, score);
 
+  // Cleanup
+  Mix_FreeChunk(chompSound);
+  Mix_FreeMusic(music);
+
+  TTF_CloseFont(font);
+  TTF_Quit();
+
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
+
   SDL_Quit();
   return 0;
 }
