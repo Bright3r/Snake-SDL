@@ -5,21 +5,12 @@ snake *createSnake(int x, int y) {
   snake *s = (snake *) malloc(sizeof(snake));
 
   s->body = createQueue();
+  s->direction = Right;
   s->x = x;
   s->y = y;
 
   growSnakeBody(s); // Start with size 1
   return s;
-}
-
-void growSnakeBody(snake *s) {
-  SDL_Rect *rect = (SDL_Rect *) malloc(sizeof(SDL_Rect));
-  rect->x = s->x;
-  rect->y = s->y;
-  rect->w = SNAKE_WIDTH;
-  rect->h = SNAKE_WIDTH;
-
-  push(s->body, (void *) rect);
 }
 
 void drawSnake(SDL_Renderer *renderer, snake *s) {
@@ -37,4 +28,38 @@ void drawSnake(SDL_Renderer *renderer, snake *s) {
   }
 
   SDL_RenderPresent(renderer);
+}
+
+void growSnakeBody(snake *s) {
+  SDL_Rect *rect = (SDL_Rect *) malloc(sizeof(SDL_Rect));
+  rect->x = s->x;
+  rect->y = s->y;
+  rect->w = SNAKE_WIDTH;
+  rect->h = SNAKE_WIDTH;
+
+  push(s->body, (void *) rect);
+}
+
+void moveSnake(snake *s) {
+  growSnakeBody(s); // add rect to new head location
+  pop(s->body); // remove tail
+}
+
+void updateSnake(snake *s) {
+  switch (s->direction) {
+    case Up:
+      s->y += -SNAKE_WIDTH;
+      break;
+    case Down:
+      s->y += SNAKE_WIDTH;
+      break;
+    case Left:
+      s->x += -SNAKE_WIDTH;
+      break;
+    case Right:
+      s->x += SNAKE_WIDTH;
+      break;
+  }
+
+  moveSnake(s);
 }

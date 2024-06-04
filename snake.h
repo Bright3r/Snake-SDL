@@ -5,11 +5,14 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 
-#define SNAKE_WIDTH 50
+#define SNAKE_WIDTH 10
+
+enum directions {Up, Down, Left, Right};
 
 typedef struct snake {
   queue *body;
   int x, y;
+  enum directions direction;
 } snake;
 
 snake *createSnake(int x, int y);

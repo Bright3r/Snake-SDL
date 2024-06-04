@@ -15,22 +15,40 @@ int main(void) {
     fprintf(stderr, "Failed to render window: %s\n", SDL_GetError());
   }
 
-  refreshScreen(renderer);
-  
   snake *s = createSnake(50, 50);
-  drawSnake(renderer, s);
-
 
   bool isGameRunning = true;
   SDL_Event event;
   while (isGameRunning) {
-    while (SDL_PollEvent(&event)) {
+    refreshScreen(renderer);
+    drawSnake(renderer, s);
+
+    // handle input
+    while (SDL_PollEvent(&event) != 0) {
       if (event.type == SDL_QUIT) {
         isGameRunning = false;
       }
-
-      SDL_Delay(100);
+      else if (event.type == SDL_KEYDOWN) {
+        switch (event.key.keysym.sym) {
+          case SDLK_w:
+            s->direction = Up;
+            break;
+          case SDLK_a:
+            s->direction = Left;
+            break;
+          case SDLK_s:
+            s->direction = Down;
+            break;
+          case SDLK_d:
+            s->direction = Right;
+            break;
+        }
+      }
     }
+
+    updateSnake(s);
+
+    SDL_Delay(16.667f); // 60fps
   }
 
   SDL_DestroyRenderer(renderer);
