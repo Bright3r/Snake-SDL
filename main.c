@@ -25,6 +25,8 @@ int main(void) {
     fprintf(stderr, "Failed to render window: %s\n", SDL_GetError());
   }
 
+  startScreen(renderer, font, windowWidth);
+
   // Initialize game objects
   snake *s = createSnake(50, 50);
   apple *app = createApple(GRID_ROW_SIZE, SNAKE_WIDTH);
@@ -95,6 +97,8 @@ int main(void) {
     SDL_Delay(floor(FRAME_INTERVAL - elapsedTime));
   }
 
+  endScreen(renderer, font, windowWidth, score);
+
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
@@ -106,20 +110,51 @@ void refreshScreen(SDL_Renderer *renderer) {
   SDL_RenderClear(renderer);
 }
 
+void startScreen(SDL_Renderer *renderer, TTF_Font *font, int windowWidth) {
+  refreshScreen(renderer);
+
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  SDL_Color color = {255, 255, 255, 255};
+  drawText(renderer, font, color, windowWidth / 2, SNAKE_WIDTH * 2, "Press Any Key to Start!");
+
+  SDL_RenderPresent(renderer);
+
+  bool isReadyToStart = false;
+  SDL_Event event;
+  while (!isReadyToStart) {
+    // handle input
+    while (SDL_PollEvent(&event) != 0) {
+      if (event.type == SDL_QUIT) {
+        SDL_Quit();
+      }
+      else if (event.type == SDL_KEYDOWN) {
+        isReadyToStart = true;
+      }
+    }
+
+    // Cap Framerate
+    SDL_Delay(floor(FRAME_INTERVAL));
+  }
+}
+
+void drawText(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int x, int y, char *msg) {
+  SDL_Surface *text_surface = TTF_RenderText_Solid(font, msg, color);
+  SDL_Texture *text = SDL_CreateTextureFromSurface(renderer, text_surface);
+
+  // Draw text such that (x, y) is the center
+  SDL_Rect dest = {x - (text_surface->w / 2), y - (text_surface->h / 2), text_surface->w, text_surface->h};
+  SDL_RenderCopy(renderer, text, NULL, &dest);
+
+  SDL_DestroyTexture(text);
+  SDL_FreeSurface(text_surface);
+}
+
 void drawScore(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int windowWidth, int score) {
   // Get string of score
   char scoreText[12] = {0};
   sprintf(scoreText, "Score: %d", score);
 
-  SDL_Surface *text_surface = TTF_RenderText_Solid(font, scoreText, color);
-  SDL_Texture *text = SDL_CreateTextureFromSurface(renderer, text_surface);
-
-  int midpoint = (windowWidth - text_surface->w) / 2;
-  SDL_Rect dest = {midpoint, text_surface->h, text_surface->w, text_surface->h};
-  SDL_RenderCopy(renderer, text, NULL, &dest);
-
-  SDL_DestroyTexture(text);
-  SDL_FreeSurface(text_surface);
+  drawText(renderer, font, color, windowWidth / 2, SNAKE_WIDTH, scoreText);
 }
 
 void drawGrid(SDL_Renderer *renderer, int windowWidth) {
@@ -135,4 +170,35 @@ void drawGrid(SDL_Renderer *renderer, int windowWidth) {
   windowWidth--;  // Set to last visible pixel of window
   SDL_RenderDrawLine(renderer, windowWidth, 0, windowWidth, windowWidth);
   SDL_RenderDrawLine(renderer, 0, windowWidth, windowWidth, windowWidth);
+}
+
+void endScreen(SDL_Renderer *renderer, TTF_Font *font, int windowWidth, int score) {
+  refreshScreen(renderer);
+
+  // Write "Game Over"
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  SDL_Color color = {255, 255, 255, 255};
+  drawText(renderer, font, color, windowWidth / 2, SNAKE_WIDTH * 2, "Game Over!");
+
+  // Write Final Score
+  char scoreText[20] = {0};
+  sprintf(scoreText, "Final Score: %d", score);
+  drawText(renderer, font, color, windowWidth / 2, windowWidth / 2, scoreText);
+
+  SDL_RenderPresent(renderer);
+
+  // Wait for keypress to exit
+  bool isReadyToQuit = false;
+  SDL_Event event;
+  while (!isReadyToQuit) {
+    // handle input
+    while (SDL_PollEvent(&event) != 0) {
+      if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN) {
+        isReadyToQuit = true;
+      }
+    }
+
+    // Cap Framerate
+    SDL_Delay(floor(FRAME_INTERVAL));
+  }
 }
