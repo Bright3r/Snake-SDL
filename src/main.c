@@ -42,8 +42,7 @@ int main(void) {
     fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
   }
 
-
-
+  // Create window and renderer
   int windowWidth = GRID_ROW_SIZE * SNAKE_WIDTH;
   SDL_Window *window = SDL_CreateWindow("Snake", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowWidth, SDL_WINDOW_SHOWN);
   if (window == NULL) {
@@ -55,7 +54,15 @@ int main(void) {
     fprintf(stderr, "Failed to render window: %s\n", SDL_GetError());
   }
 
-  startScreen(renderer, font, windowWidth);
+
+
+  // Get game mode and join lobby if multiplayer
+  enum game_modes game_mode;
+  int sock_fd;
+  startScreen(renderer, font, windowWidth, &game_mode, &sock_fd);
+
+
+
 
   // Initialize game objects
   snake *s = createSnake(50, 50);
@@ -100,7 +107,7 @@ int main(void) {
     // Check if snake is colliding with border or with self
     if (checkSnakeBorderCollision(s, GRID_ROW_SIZE) || checkSnakeSelfCollision(s)) {
       isGameRunning = false;
-      int channel = Mix_PlayChannel(-1, deathSound, 0); // Death sound
+      Mix_PlayChannel(-1, deathSound, 0); // Death sound
     }
 
     // Check if snake is colliding with apple
@@ -108,7 +115,7 @@ int main(void) {
       growSnakeBody(s);
       score++;
 
-      int channel = Mix_PlayChannel(-1, chompSound, 0);
+      Mix_PlayChannel(-1, chompSound, 0);
       moveApple(app, GRID_ROW_SIZE, SNAKE_WIDTH);
     }
     else {
@@ -156,12 +163,11 @@ void refreshScreen(SDL_Renderer *renderer) {
   SDL_RenderClear(renderer);
 }
 
-void startScreen(SDL_Renderer *renderer, TTF_Font *font, int windowWidth) {
+void startScreen(SDL_Renderer *renderer, TTF_Font *font, int windowWidth, enum game_modes *game_mode, int *sock_fd) {
   refreshScreen(renderer);
 
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-  SDL_Color color = {255, 255, 255, 255};
-  drawText(renderer, font, color, windowWidth / 2, SNAKE_WIDTH * 2, "Press Any Key to Start!");
+  SDL_Color fontColor = {255, 255, 255, 255};
+  drawText(renderer, font, fontColor, windowWidth / 2, SNAKE_WIDTH * 2, "Press Any Key to Start!");
 
   SDL_RenderPresent(renderer);
 
@@ -174,11 +180,77 @@ void startScreen(SDL_Renderer *renderer, TTF_Font *font, int windowWidth) {
         SDL_Quit();
       }
       else if (event.type == SDL_KEYDOWN) {
-        isReadyToStart = true;
+        switch (event.key.keysym.sym) {
+          case SDLK_s:  // singleplayer
+            *game_mode = SinglePlayer;
+            isReadyToStart = true;
+            break;
+          case SDLK_h:  // host
+            *game_mode = MultiPlayer;
+            hostLobby(sock_fd);
+            isReadyToStart = true;
+            break;
+          case SDLK_j:  // join
+            *game_mode = MultiPlayer;
+            joinLobby(sock_fd);
+            isReadyToStart = true;
+            break;
+        }
       }
     }
 
     // Cap Framerate
+    SDL_Delay(floor(FRAME_INTERVAL));
+  }
+}
+
+void hostLobby(int *sock_fd) {
+  *sock_fd = host(8080);
+
+  char buffer[100] = {0};
+
+  bool isReadyToStart = false;
+  bool isLobbyEmpty = true;
+  SDL_Event event;
+  while (!isReadyToStart) {
+    if (isLobbyEmpty) {
+      if (recv(*sock_fd, buffer, sizeof(buffer), 0) < 0) {
+        printf("Player has left the lobby!\n");
+      }
+      else {
+        printf("%s has joined the lobby!\n", buffer);
+        isLobbyEmpty = false;
+      }
+    }
+
+    // handle input
+    while (SDL_PollEvent(&event) != 0) {
+      if (event.type == SDL_QUIT) {
+        SDL_Quit();
+      }
+      else if (event.type == SDL_KEYDOWN) {
+        switch (event.key.keysym.sym) {
+          case SDLK_s:  // singleplayer
+            isReadyToStart = true;
+            char *msg = "Starting";
+            send(*sock_fd, msg, 9, 0);
+            printf("Sent msg\n");
+            break;
+        }
+      }
+    }
+
+    // Cap Framerate
+    SDL_Delay(floor(FRAME_INTERVAL));
+  }
+}
+
+void joinLobby(int *sock_fd) {
+  *sock_fd = join("127.0.0.1", 8080);
+
+  bool hostStarted = false;
+  while (!hostStarted) {
+    hostStarted = getLobbyStatus(*sock_fd);
     SDL_Delay(floor(FRAME_INTERVAL));
   }
 }
