@@ -4,7 +4,7 @@
 
 #include <SDL2/SDL.h>
 #include <stdlib.h>
-#include "utils.c"
+#include "../utils.c"
 
 #define SNAKE_WIDTH 25
 

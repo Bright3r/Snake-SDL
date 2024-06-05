@@ -8,10 +8,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include "queue.c"
+#include "./data-structures/queue.c"
+#include "./objs/apple.c"
+#include "./objs/snake.c"
 #include "utils.c"
-#include "apple.c"
-#include "snake.c"
 
 #define GRID_ROW_SIZE 20
 #define FRAME_INTERVAL 100.0f
