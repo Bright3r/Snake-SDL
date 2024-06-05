@@ -19,6 +19,12 @@ queue *createQueue() {
 }
 
 void destroyQueue(queue *q) {
+  struct node *curr = q->head;
+  for (int i = 0; i < q->size; i++) {
+    struct node *temp = curr->next;
+    destroyNode(curr);
+    curr = temp;
+  }
   free(q);
 }
 

@@ -135,6 +135,9 @@ int main(void) {
   endScreen(renderer, font, windowWidth, score);
 
   // Cleanup
+  destroySnake(s);
+  destroyApple(app);
+
   Mix_FreeChunk(chompSound);
   Mix_FreeMusic(music);
 

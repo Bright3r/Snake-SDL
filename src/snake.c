@@ -13,6 +13,11 @@ snake *createSnake(int x, int y) {
   return s;
 }
 
+void destroySnake(snake *s) {
+  destroyQueue(s->body);
+  free(s);
+}
+
 void drawSnake(SDL_Renderer *renderer, snake *s) {
   SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255); // green
   
@@ -40,7 +45,8 @@ void growSnakeBody(snake *s) {
 
 void moveSnake(snake *s) {
   growSnakeBody(s); // add rect to new head location
-  pop(s->body); // remove tail
+  void *data = pop(s->body); // remove tail
+  free(data);
 }
 
 void updateSnakePosition(snake *s) {
