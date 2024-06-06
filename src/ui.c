@@ -77,3 +77,4 @@ void drawText(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int x, in
   SDL_DestroyTexture(text);
   SDL_FreeSurface(text_surface);
 }
+

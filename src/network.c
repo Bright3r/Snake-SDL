@@ -89,14 +89,26 @@ int join(char *ip_addr, int port_number) {
   return sock_fd;
 }
 
-bool getLobbyStatus(int sock_fd) {
-  char buffer[100] = {0};
-  if (recv(sock_fd, buffer, sizeof(buffer), 0) < 0) {
+bool readSocket(int sock_fd, char *buffer) {
+  if (recv(sock_fd, buffer, sizeof(buffer), 0) <= 0) {
     perror("Lobby no longer exists!\n");
     exit(EXIT_FAILURE);
   }
   else {
     printf("Received msg: %s\n", buffer);
+    return true;
+  }
+
+  return false;
+}
+
+bool getLobbyStatus(int sock_fd) {
+  char buffer[100] = {0};
+  if (!readSocket(sock_fd, buffer)) {
+    perror("Lobby no longer exists!\n");
+    exit(EXIT_FAILURE);
+  }
+  else {
     if (strcmp(buffer, "Starting") == 0) {
       return true;
     }
@@ -128,12 +140,11 @@ void *listenForOtherPlayer(void *args) {
   bool isRunning = true;
   while (isRunning) {
     char buffer[100] = {0};
-    if (recv(sock_fd, buffer, sizeof(buffer), 0) < 0) {
+    if (!readSocket(sock_fd, buffer)) {
       perror("Connection Terminated!\n");
       exit(EXIT_FAILURE);
     }
     else {
-      printf("Received msg: %s\n", buffer);
       pthread_mutex_lock(lock);
       if (*game_status == Ongoing) {
         if (strcmp(buffer, "Victory") == 0) {
