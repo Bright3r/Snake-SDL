@@ -113,11 +113,17 @@ void declareLoss(int sock_fd) {
   sendMessage(sock_fd, "Defeat");
 }
 
+void declareRestart(int sock_fd) {
+  sendMessage(sock_fd, "Restart");
+}
+
 void *listenForOtherPlayer(void *args) {
+  // Parse thread args
   thread_args *my_args = (thread_args *) args;
   int sock_fd = my_args->sock_fd;
   pthread_mutex_t *lock = my_args->lock;
   enum game_stats *game_status = my_args->game_status;
+  free(my_args);
 
   bool isRunning = true;
   while (isRunning) {

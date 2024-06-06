@@ -2,9 +2,6 @@
 
 int PORT = 8081;
 
-SDL_Color COLOR_BLACK = {0, 0, 0, 255};
-SDL_Color COLOR_WHITE = {255, 255, 255, 255};
-
 TTF_Font *font;
 Mix_Music *music;
 Mix_Chunk *chompSound;
@@ -28,7 +25,7 @@ int main(void) {
 
 
   // Get game mode and join lobby if multiplayer
-  enum game_modes game_mode = startScreen(renderer, windowWidth);
+  enum game_modes game_mode = startScreen(renderer);
 
   int sock_fd;
   if (game_mode == Host) {
@@ -37,118 +34,18 @@ int main(void) {
   else if (game_mode == Join) {
     joinLobby(renderer, &sock_fd);
   }
-  SDL_Delay(250);
 
-
-  // Initialize game objects
-  snake *s = createSnake(50, 50);
-  apple *app = createApple(GRID_ROW_SIZE, SNAKE_WIDTH);
-  int score = 0;
-  int pointsToWin = 1;
-  enum game_stats game_status = NonCompetitive;
-
+  // Initialize multiplayer objects
   pthread_t thread;
   pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-  if (isMultiplayer(game_mode)) {
-    game_status = Ongoing;
-    thread = createThread(&thread, sock_fd, &game_status, &lock);
-  }
 
   // Game Loop
-  bool isGameRunning = true;
-  SDL_Event event;
-  while (isGameRunning) {
-    uint32_t startTime = SDL_GetTicks();
-
-    // handle input
-    while (SDL_PollEvent(&event) != 0) {
-      if (event.type == SDL_QUIT) {
-        isGameRunning = false;
-      }
-      else if (event.type == SDL_KEYDOWN) {
-        switch (event.key.keysym.sym) {
-          case SDLK_w:
-            if (s->direction != Down)
-              s->direction = Up;
-            break;
-          case SDLK_a:
-            if (s->direction != Right)
-              s->direction = Left;
-            break;
-          case SDLK_s:
-            if (s->direction != Up)
-              s->direction = Down;
-            break;
-          case SDLK_d:
-            if (s->direction != Left)
-              s->direction = Right;
-            break;
-        }
-      }
-    }
-
-    updateSnakePosition(s);
-
-    // Check if snake is colliding with border or with self
-    if (checkSnakeBorderCollision(s, GRID_ROW_SIZE) || checkSnakeSelfCollision(s)) {
-      isGameRunning = false;
-      Mix_PlayChannel(-1, deathSound, 0); // Death sound
-      
-      if (isMultiplayer(game_mode)) {
-        pthread_mutex_lock(&lock);
-        game_status = Lost;
-        pthread_mutex_unlock(&lock);
-
-        declareLoss(sock_fd);
-      }
-    }
-
-    // Check if snake is colliding with apple
-    if (checkCollision(getSnakeHead(s), app)) {
-      growSnakeBody(s);
-      score++;
-
-      Mix_PlayChannel(-1, chompSound, 0);
-      moveApple(app, GRID_ROW_SIZE, SNAKE_WIDTH);
-
-      if (isMultiplayer(game_mode) && score >= pointsToWin) {
-        pthread_mutex_lock(&lock);
-        game_status = Won;
-        pthread_mutex_unlock(&lock);
-
-        declareWin(sock_fd);
-      }
-    }
-    else {
-      moveSnake(s);
-    }
+  SDL_Delay(250); // Small delay before game starts
+  gameLoop(renderer, game_mode, &thread, &lock, sock_fd);
 
 
-    if (game_status == Won || game_status == Lost) {
-      isGameRunning = false;
-    }
-
-    // Draw updated objects
-    refreshScreen(renderer);
-    drawApple(renderer, app);
-    drawSnake(renderer, s);
-    drawGrid(renderer, windowWidth);
-    drawScore(renderer, windowWidth, score);
-
-    SDL_RenderPresent(renderer);
-
-    // Cap Framerate
-    uint32_t currTime = SDL_GetTicks();
-    float elapsedTime = currTime - startTime;
-    SDL_Delay(floor(FRAME_INTERVAL - elapsedTime));
-  }
-
-  endScreen(renderer, windowWidth, score, game_status);
 
   // Cleanup
-  destroySnake(s);
-  destroyApple(app);
-
   Mix_FreeChunk(chompSound);
   Mix_FreeMusic(music);
 
@@ -162,11 +59,18 @@ int main(void) {
   return 0;
 }
 
+int getCenter() {
+  return (GRID_ROW_SIZE / 2) * SNAKE_WIDTH;
+}
 
-enum game_modes startScreen(SDL_Renderer *renderer, int windowWidth) {
+
+enum game_modes startScreen(SDL_Renderer *renderer) {
   // Draw UI
   refreshScreen(renderer);
-  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "Press 's' for SinglePlayer, 'h' to host a lobby, or 'j' to join a lobby!");
+  drawText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 2, "Snake Racing");
+  drawText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 6, "Press 's' for SinglePlayer");
+  drawText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 8, "Press 'h' to host a lobby");
+  drawText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 10, "Press 'j' to join a lobby!");
   SDL_RenderPresent(renderer);
 
   // Handle input
@@ -211,7 +115,7 @@ void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
 
   // Create UI
   ui_element *ui[10] = {0};
-  ui[0] = createUIText(renderer, font, COLOR_WHITE, 100, 100, &hostingText);
+  ui[0] = createUIText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 2, &hostingText);
 
   int numUIElements = 1;
   drawUI(renderer, ui, numUIElements);
@@ -231,9 +135,9 @@ void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
       }
       else {
         sprintf(playerJoinedText, "%s has joined the lobby!", buffer);
-        ui[numUIElements++] = createUIText(renderer, font, COLOR_WHITE, 100, 200, &playerJoinedText_ptr);
+        ui[numUIElements++] = createUIText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * (numUIElements + 1) * 2, &playerJoinedText_ptr);
 
-        ui[numUIElements++] = createUIText(renderer, font, COLOR_WHITE, 100, 300, &directionsText);
+        ui[numUIElements++] = createUIText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * (numUIElements + 1) * 2, &directionsText);
         isLobbyEmpty = false;
 
         printf(playerJoinedText);
@@ -273,7 +177,7 @@ void joinLobby(SDL_Renderer *renderer, int *sock_fd) {
   // Get Host IP
   ui_element *ui[2] = {0};
   char *promptText = "Enter Host:";
-  ui[0] = createUIText(renderer, font, COLOR_WHITE, 100, 100, &promptText);
+  ui[0] = createUIText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 2, &promptText);
   drawUI(renderer, ui, 1);
 
   SDL_StartTextInput();
@@ -306,7 +210,7 @@ void joinLobby(SDL_Renderer *renderer, int *sock_fd) {
       }
     }
 
-    ui[1] = createUIText(renderer, font, COLOR_WHITE, 100, 200, &buffer_ptr);
+    ui[1] = createUIText(renderer, font, COLOR_WHITE, getCenter(), getCenter(), &buffer_ptr);
     drawUI(renderer, ui, 2);
     destroyUIElement(ui[1]);
 
@@ -317,15 +221,12 @@ void joinLobby(SDL_Renderer *renderer, int *sock_fd) {
   SDL_StopTextInput();
   
 
-
   // Join Host
   *sock_fd = join(buffer, PORT);
 
-
-
   // Show player that lobby was joined
   refreshScreen(renderer);
-  drawText(renderer, font, COLOR_WHITE, 200, 200, "Waiting for host to start!");
+  drawText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 2, "Waiting for host to start!");
   SDL_RenderPresent(renderer);
 
   // Wait for host to start
@@ -337,17 +238,18 @@ void joinLobby(SDL_Renderer *renderer, int *sock_fd) {
 }
 
 
-void drawScore(SDL_Renderer *renderer, int windowWidth, int score) {
+void drawScore(SDL_Renderer *renderer, int score) {
   // Get string of score
   char scoreText[12] = {0};
   sprintf(scoreText, "Score: %d", score);
 
-  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH, scoreText);
+  drawText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH, scoreText);
 }
 
-void drawGrid(SDL_Renderer *renderer, int windowWidth) {
+void drawGrid(SDL_Renderer *renderer) {
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
   
+  int windowWidth = GRID_ROW_SIZE * SNAKE_WIDTH;
   for (int x = 0; x < windowWidth; x += SNAKE_WIDTH) {
     int y = x;
     SDL_RenderDrawLine(renderer, x, 0, x, windowWidth); // Vertical lines
@@ -360,24 +262,24 @@ void drawGrid(SDL_Renderer *renderer, int windowWidth) {
   SDL_RenderDrawLine(renderer, 0, windowWidth, windowWidth, windowWidth);
 }
 
-void endScreen(SDL_Renderer *renderer, int windowWidth, int score, enum game_stats game_status) {
+void endScreen(SDL_Renderer *renderer, int score, enum game_stats game_status) {
   refreshScreen(renderer);
 
   // Write "Game Over"
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
   if (game_status == NonCompetitive) {
-    drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "Game Over!");
+    drawText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 2, "Game Over!");
 
     // Write Final Score
     char scoreText[20] = {0};
     sprintf(scoreText, "Final Score: %d", score);
-    drawText(renderer, font, COLOR_WHITE, windowWidth / 2, windowWidth / 2, scoreText);
+    drawText(renderer, font, COLOR_WHITE, getCenter(), getCenter(), scoreText);
   }
   else if (game_status == Won) {
-    drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "You Won!");
+    drawText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 2, "You Won!");
   }
   else if (game_status == Lost) {
-    drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "You Lost!");
+    drawText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * 2, "You Lost!");
   }
   SDL_RenderPresent(renderer);
 
@@ -444,4 +346,118 @@ void init() {
   if (deathSound == NULL) {
     fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
   }
+}
+
+void gameLoop(SDL_Renderer *renderer, enum game_modes game_mode, pthread_t *thread, pthread_mutex_t *lock, int sock_fd) {
+  // Initialize multiplayer
+  enum game_stats game_status = NonCompetitive;
+  if (isMultiplayer(game_mode)) {
+    game_status = Ongoing;
+    *thread = createThread(thread, sock_fd, &game_status, lock);
+  }
+
+  // Initialize game objects
+  snake *s = createSnake(50, 50);
+  apple *app = createApple(GRID_ROW_SIZE, SNAKE_WIDTH);
+  int score = 0;
+  int pointsToWin = 1;
+
+  bool isGameRunning = true;
+  SDL_Event event;
+  while (isGameRunning) {
+    uint32_t startTime = SDL_GetTicks();
+
+    // handle input
+    while (SDL_PollEvent(&event) != 0) {
+      if (event.type == SDL_QUIT) {
+        isGameRunning = false;
+      }
+      else if (event.type == SDL_KEYDOWN) {
+        switch (event.key.keysym.sym) {
+          case SDLK_w:
+            if (s->direction != Down)
+              s->direction = Up;
+            break;
+          case SDLK_a:
+            if (s->direction != Right)
+              s->direction = Left;
+            break;
+          case SDLK_s:
+            if (s->direction != Up)
+              s->direction = Down;
+            break;
+          case SDLK_d:
+            if (s->direction != Left)
+              s->direction = Right;
+            break;
+        }
+      }
+    }
+
+    updateSnakePosition(s);
+
+    // BEGINNING OF CRITICAL SECTION
+    if (isMultiplayer(game_mode)) {
+      pthread_mutex_lock(lock);
+    }
+
+    // Check if snake is colliding with border or with self
+    if (checkSnakeBorderCollision(s, GRID_ROW_SIZE) || checkSnakeSelfCollision(s)) {
+      isGameRunning = false;
+      Mix_PlayChannel(-1, deathSound, 0); // Death sound
+      
+      if (isMultiplayer(game_mode)) {
+        game_status = Lost;
+        declareLoss(sock_fd);
+      }
+    }
+
+    // Check if snake is colliding with apple
+    if (checkCollision(getSnakeHead(s), app)) {
+      growSnakeBody(s);
+      score++;
+
+      Mix_PlayChannel(-1, chompSound, 0);
+      moveApple(app, GRID_ROW_SIZE, SNAKE_WIDTH);
+
+      if (isMultiplayer(game_mode) && score >= pointsToWin) {
+        game_status = Won;
+        declareWin(sock_fd);
+      }
+    }
+    else {
+      moveSnake(s);
+    }
+
+
+    if (game_status == Won || game_status == Lost) {
+      isGameRunning = false;
+    }
+    
+    if (isMultiplayer(game_mode)) {
+      pthread_mutex_unlock(lock);
+    }
+    // END OF CRITICAL SECTION
+
+
+    // Draw updated objects
+    refreshScreen(renderer);
+    drawApple(renderer, app);
+    drawSnake(renderer, s);
+    drawGrid(renderer);
+    drawScore(renderer, score);
+
+    SDL_RenderPresent(renderer);
+
+    // Cap Framerate
+    uint32_t currTime = SDL_GetTicks();
+    float elapsedTime = currTime - startTime;
+    SDL_Delay(floor(FRAME_INTERVAL - elapsedTime));
+  }
+
+  destroySnake(s);
+  destroyApple(app);
+
+  pthread_join(*thread, NULL);
+  endScreen(renderer, score, game_status);
 }

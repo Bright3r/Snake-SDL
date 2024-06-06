@@ -3,6 +3,10 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdlib.h>
 
+SDL_Color COLOR_BLACK = {0, 0, 0, 255};
+SDL_Color COLOR_WHITE = {255, 255, 255, 255};
+SDL_Color COLOR_BG = {148, 148, 184, 255};
+
 typedef struct ui_element {
   SDL_Texture *texture;
   SDL_Color color;
@@ -44,7 +48,7 @@ void destroyUIElement(ui_element *element) {
 }
 
 void refreshScreen(SDL_Renderer *renderer) {
-  SDL_SetRenderDrawColor(renderer, 148, 148, 184, 255);
+  SDL_SetRenderDrawColor(renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, COLOR_BG.a);
   SDL_RenderClear(renderer);
 }
 
