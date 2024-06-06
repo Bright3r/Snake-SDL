@@ -29,7 +29,7 @@ int main(void) {
 
   // Get game mode and join lobby if multiplayer
   enum game_modes game_mode = startScreen(renderer, windowWidth);
-  
+
   int sock_fd;
   if (game_mode == Host) {
     hostLobby(renderer, &sock_fd);
@@ -44,6 +44,15 @@ int main(void) {
   snake *s = createSnake(50, 50);
   apple *app = createApple(GRID_ROW_SIZE, SNAKE_WIDTH);
   int score = 0;
+  int pointsToWin = 1;
+  enum game_stats game_status = NonCompetitive;
+
+  pthread_t thread;
+  pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+  if (isMultiplayer(game_mode)) {
+    game_status = Ongoing;
+    thread = createThread(&thread, sock_fd, &game_status, &lock);
+  }
 
   // Game Loop
   bool isGameRunning = true;
@@ -84,6 +93,14 @@ int main(void) {
     if (checkSnakeBorderCollision(s, GRID_ROW_SIZE) || checkSnakeSelfCollision(s)) {
       isGameRunning = false;
       Mix_PlayChannel(-1, deathSound, 0); // Death sound
+      
+      if (isMultiplayer(game_mode)) {
+        pthread_mutex_lock(&lock);
+        game_status = Lost;
+        pthread_mutex_unlock(&lock);
+
+        declareLoss(sock_fd);
+      }
     }
 
     // Check if snake is colliding with apple
@@ -93,9 +110,22 @@ int main(void) {
 
       Mix_PlayChannel(-1, chompSound, 0);
       moveApple(app, GRID_ROW_SIZE, SNAKE_WIDTH);
+
+      if (isMultiplayer(game_mode) && score >= pointsToWin) {
+        pthread_mutex_lock(&lock);
+        game_status = Won;
+        pthread_mutex_unlock(&lock);
+
+        declareWin(sock_fd);
+      }
     }
     else {
       moveSnake(s);
+    }
+
+
+    if (game_status == Won || game_status == Lost) {
+      isGameRunning = false;
     }
 
     // Draw updated objects
@@ -113,7 +143,7 @@ int main(void) {
     SDL_Delay(floor(FRAME_INTERVAL - elapsedTime));
   }
 
-  endScreen(renderer, windowWidth, score);
+  endScreen(renderer, windowWidth, score, game_status);
 
   // Cleanup
   destroySnake(s);
@@ -330,18 +360,25 @@ void drawGrid(SDL_Renderer *renderer, int windowWidth) {
   SDL_RenderDrawLine(renderer, 0, windowWidth, windowWidth, windowWidth);
 }
 
-void endScreen(SDL_Renderer *renderer, int windowWidth, int score) {
+void endScreen(SDL_Renderer *renderer, int windowWidth, int score, enum game_stats game_status) {
   refreshScreen(renderer);
 
   // Write "Game Over"
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "Game Over!");
+  if (game_status == NonCompetitive) {
+    drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "Game Over!");
 
-  // Write Final Score
-  char scoreText[20] = {0};
-  sprintf(scoreText, "Final Score: %d", score);
-  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, windowWidth / 2, scoreText);
-
+    // Write Final Score
+    char scoreText[20] = {0};
+    sprintf(scoreText, "Final Score: %d", score);
+    drawText(renderer, font, COLOR_WHITE, windowWidth / 2, windowWidth / 2, scoreText);
+  }
+  else if (game_status == Won) {
+    drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "You Won!");
+  }
+  else if (game_status == Lost) {
+    drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "You Lost!");
+  }
   SDL_RenderPresent(renderer);
 
   // Wait for keypress to exit
@@ -358,6 +395,13 @@ void endScreen(SDL_Renderer *renderer, int windowWidth, int score) {
     // Cap Framerate
     SDL_Delay(floor(FRAME_INTERVAL));
   }
+}
+
+bool isMultiplayer(enum game_modes game_mode) {
+  if (game_mode == Host || game_mode == Join) {
+    return true;
+  }
+  return false;
 }
 
 void init() {

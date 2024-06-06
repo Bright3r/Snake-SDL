@@ -4,6 +4,26 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <pthread.h>
+
+enum game_stats {Won, Lost, Ongoing, NonCompetitive};
+
+typedef struct thread_args {
+  int sock_fd;
+  pthread_mutex_t *lock;
+  enum game_stats *game_status;
+} thread_args;
+
+bool sendMessage(int sock_fd, char *msg) {
+  if (send(sock_fd, msg, strlen(msg) + 1, 0) < 0) {
+    perror("Failed to send message through socket!\n");
+    return false;
+  }
+  else {
+    printf("Message sent: %s\n", msg);
+    return true;
+  }
+}
 
 int host(int port_number) {
   printf("Hosting\n");
@@ -65,15 +85,7 @@ int join(char *ip_addr, int port_number) {
     printf("Connected to host!\n");
   }
 
-  char *msg = "RandomGuy69";
-  if (send(sock_fd, msg, 12, 0) < 0) {
-    perror("Failed to send message through socket!\n");
-    exit(EXIT_FAILURE);
-  }
-  else {
-    printf("Joined Lobby!\n");
-  }
-
+  sendMessage(sock_fd, "RandomGuy");  // announce who joined
   return sock_fd;
 }
 
@@ -91,4 +103,58 @@ bool getLobbyStatus(int sock_fd) {
   }
 
   return false;
+}
+
+void declareWin(int sock_fd) {
+  sendMessage(sock_fd, "Victory");
+}
+
+void declareLoss(int sock_fd) {
+  sendMessage(sock_fd, "Defeat");
+}
+
+void *listenForOtherPlayer(void *args) {
+  thread_args *my_args = (thread_args *) args;
+  int sock_fd = my_args->sock_fd;
+  pthread_mutex_t *lock = my_args->lock;
+  enum game_stats *game_status = my_args->game_status;
+
+  bool isRunning = true;
+  while (isRunning) {
+    char buffer[100] = {0};
+    if (recv(sock_fd, buffer, sizeof(buffer), 0) < 0) {
+      perror("Connection Terminated!\n");
+      exit(EXIT_FAILURE);
+    }
+    else {
+      printf("Received msg: %s\n", buffer);
+      pthread_mutex_lock(lock);
+      if (*game_status == Ongoing) {
+        if (strcmp(buffer, "Victory") == 0) {
+          *game_status = Lost;
+          isRunning = false;
+        }
+        else if (strcmp(buffer, "Defeat") == 0) {
+          *game_status = Won;
+          isRunning = false;
+        }
+      }
+      else {  // Kill thread if game already over
+        isRunning = false;
+      }
+
+      pthread_mutex_unlock(lock);
+    }
+  }
+
+  pthread_exit(NULL);
+}
+
+int createThread(pthread_t *thread, int sock_fd, enum game_stats *game_status, pthread_mutex_t *lock) {
+  thread_args *args = (thread_args *) malloc(sizeof(thread_args));
+  args->sock_fd = sock_fd;
+  args->game_status = game_status;
+  args->lock = lock;
+
+  return pthread_create(thread, NULL, listenForOtherPlayer, (void *) args);
 }
