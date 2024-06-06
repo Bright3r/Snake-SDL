@@ -1,5 +1,13 @@
 #include "main.h"
 
+SDL_Color COLOR_BLACK = {0, 0, 0, 255};
+SDL_Color COLOR_WHITE = {255, 255, 255, 255};
+
+TTF_Font *font;
+Mix_Music *music;
+Mix_Chunk *chompSound;
+Mix_Chunk *deathSound;
+
 int main(void) {
   // Initialize SDL2
   // Video
@@ -12,7 +20,7 @@ int main(void) {
     fprintf(stderr, "TTF_Init has failed: %s\n", TTF_GetError());
   }
 
-  TTF_Font *font = TTF_OpenFont("./assets/fonts/PixelifySans-VariableFont_wght.ttf", 24);
+  font = TTF_OpenFont("./assets/fonts/PixelifySans-VariableFont_wght.ttf", 24);
   if (font == NULL) {
     fprintf(stderr, "Failed to open font: %s\n", TTF_GetError());
   }
@@ -23,7 +31,7 @@ int main(void) {
   }
 
   // Play background music
-  Mix_Music *music = Mix_LoadMUS("./assets/sounds/music.mp3");
+  music = Mix_LoadMUS("./assets/sounds/music.mp3");
   if (music == NULL) {
     fprintf(stderr, "Failed to load music: %s\n", Mix_GetError());
   }
@@ -32,12 +40,12 @@ int main(void) {
   }
 
   // Load Sound Effects
-  Mix_Chunk *chompSound = Mix_LoadWAV("./assets/sounds/chomp.mp3");
+  chompSound = Mix_LoadWAV("./assets/sounds/chomp.mp3");
   if (chompSound == NULL) {
     fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
   }
 
-  Mix_Chunk *deathSound = Mix_LoadWAV("./assets/sounds/death.mp3");
+  deathSound = Mix_LoadWAV("./assets/sounds/death.mp3");
   if (deathSound == NULL) {
     fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
   }
@@ -59,7 +67,7 @@ int main(void) {
   // Get game mode and join lobby if multiplayer
   enum game_modes game_mode;
   int sock_fd;
-  startScreen(renderer, font, windowWidth, &game_mode, &sock_fd);
+  startScreen(renderer, windowWidth, &game_mode, &sock_fd);
 
 
 
@@ -127,9 +135,7 @@ int main(void) {
     drawApple(renderer, app);
     drawSnake(renderer, s);
     drawGrid(renderer, windowWidth);
-
-    SDL_Color color = {255, 255, 255, 255};
-    drawScore(renderer, font, color, windowWidth, score);
+    drawScore(renderer, windowWidth, score);
 
     SDL_RenderPresent(renderer);
 
@@ -139,7 +145,7 @@ int main(void) {
     SDL_Delay(floor(FRAME_INTERVAL - elapsedTime));
   }
 
-  endScreen(renderer, font, windowWidth, score);
+  endScreen(renderer, windowWidth, score);
 
   // Cleanup
   destroySnake(s);
@@ -163,11 +169,10 @@ void refreshScreen(SDL_Renderer *renderer) {
   SDL_RenderClear(renderer);
 }
 
-void startScreen(SDL_Renderer *renderer, TTF_Font *font, int windowWidth, enum game_modes *game_mode, int *sock_fd) {
+void startScreen(SDL_Renderer *renderer, int windowWidth, enum game_modes *game_mode, int *sock_fd) {
   refreshScreen(renderer);
 
-  SDL_Color fontColor = {255, 255, 255, 255};
-  drawText(renderer, font, fontColor, windowWidth / 2, SNAKE_WIDTH * 2, "Press Any Key to Start!");
+  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "Press Any Key to Start!");
 
   SDL_RenderPresent(renderer);
 
@@ -187,7 +192,7 @@ void startScreen(SDL_Renderer *renderer, TTF_Font *font, int windowWidth, enum g
             break;
           case SDLK_h:  // host
             *game_mode = MultiPlayer;
-            hostLobby(sock_fd);
+            hostLobby(renderer, sock_fd);
             isReadyToStart = true;
             break;
           case SDLK_j:  // join
@@ -204,15 +209,21 @@ void startScreen(SDL_Renderer *renderer, TTF_Font *font, int windowWidth, enum g
   }
 }
 
-void hostLobby(int *sock_fd) {
-  *sock_fd = host(8080);
+void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
+  // Create UI
+  ui_element *ui[10];
+  char *hosting = "Hosting Lobby";
+  ui[0] = createUIText(renderer, font, COLOR_WHITE, 100, 100, &hosting);
 
-  char buffer[100] = {0};
+  // Host server
+  *sock_fd = host(8080);
 
   bool isReadyToStart = false;
   bool isLobbyEmpty = true;
   SDL_Event event;
+  char buffer[100] = {0};
   while (!isReadyToStart) {
+    // Wait for player to join lobby
     if (isLobbyEmpty) {
       if (recv(*sock_fd, buffer, sizeof(buffer), 0) < 0) {
         printf("Player has left the lobby!\n");
@@ -255,24 +266,13 @@ void joinLobby(int *sock_fd) {
   }
 }
 
-void drawText(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int x, int y, char *msg) {
-  SDL_Surface *text_surface = TTF_RenderText_Solid(font, msg, color);
-  SDL_Texture *text = SDL_CreateTextureFromSurface(renderer, text_surface);
 
-  // Draw text such that (x, y) is the center
-  SDL_Rect dest = {x - (text_surface->w / 2), y - (text_surface->h / 2), text_surface->w, text_surface->h};
-  SDL_RenderCopy(renderer, text, NULL, &dest);
-
-  SDL_DestroyTexture(text);
-  SDL_FreeSurface(text_surface);
-}
-
-void drawScore(SDL_Renderer *renderer, TTF_Font *font, SDL_Color color, int windowWidth, int score) {
+void drawScore(SDL_Renderer *renderer, int windowWidth, int score) {
   // Get string of score
   char scoreText[12] = {0};
   sprintf(scoreText, "Score: %d", score);
 
-  drawText(renderer, font, color, windowWidth / 2, SNAKE_WIDTH, scoreText);
+  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH, scoreText);
 }
 
 void drawGrid(SDL_Renderer *renderer, int windowWidth) {
@@ -290,18 +290,17 @@ void drawGrid(SDL_Renderer *renderer, int windowWidth) {
   SDL_RenderDrawLine(renderer, 0, windowWidth, windowWidth, windowWidth);
 }
 
-void endScreen(SDL_Renderer *renderer, TTF_Font *font, int windowWidth, int score) {
+void endScreen(SDL_Renderer *renderer, int windowWidth, int score) {
   refreshScreen(renderer);
 
   // Write "Game Over"
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-  SDL_Color color = {255, 255, 255, 255};
-  drawText(renderer, font, color, windowWidth / 2, SNAKE_WIDTH * 2, "Game Over!");
+  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "Game Over!");
 
   // Write Final Score
   char scoreText[20] = {0};
   sprintf(scoreText, "Final Score: %d", score);
-  drawText(renderer, font, color, windowWidth / 2, windowWidth / 2, scoreText);
+  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, windowWidth / 2, scoreText);
 
   SDL_RenderPresent(renderer);
 
