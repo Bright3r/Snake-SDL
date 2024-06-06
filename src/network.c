@@ -85,12 +85,12 @@ int join(char *ip_addr, int port_number) {
     printf("Connected to host!\n");
   }
 
-  sendMessage(sock_fd, "RandomGuy");  // announce who joined
+  sendMessage(sock_fd, "Joined");  // announce joining
   return sock_fd;
 }
 
 bool readSocket(int sock_fd, char *buffer) {
-  if (recv(sock_fd, buffer, sizeof(buffer), 0) <= 0) {
+  if (recv(sock_fd, buffer, sizeof(buffer), 0) < 0) {
     perror("Lobby no longer exists!\n");
     exit(EXIT_FAILURE);
   }

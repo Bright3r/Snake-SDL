@@ -48,7 +48,6 @@ int main(void) {
     } 
     else if (game_mode == Join) {
       waitForHostToStart(sock_fd);
-
     }
 
     // rerun game loop until exit
@@ -145,7 +144,7 @@ void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
         printf("Player has left the lobby!\n");
       }
       else {
-        sprintf(playerJoinedText, "%s has joined the lobby!\n", buffer);
+        sprintf(playerJoinedText, "A player has joined the lobby!\n");
         ui[numUIElements++] = createUIText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * (numUIElements + 1) * 2, &playerJoinedText_ptr);
 
         ui[numUIElements++] = createUIText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * (numUIElements + 1) * 2, &directionsText);
@@ -530,7 +529,7 @@ void hostExistingLobby(SDL_Renderer *renderer, int sock_fd) {
 void waitForHostToStart(int sock_fd) {
   bool hostStarted = false;
   while (!hostStarted) {
-    hostStarted = getLobbyStatus(sock_fd);
     SDL_Delay(floor(FRAME_INTERVAL));
+    hostStarted = getLobbyStatus(sock_fd);
   }
 }
