@@ -1,5 +1,7 @@
 #include "main.h"
 
+int PORT = 8081;
+
 SDL_Color COLOR_BLACK = {0, 0, 0, 255};
 SDL_Color COLOR_WHITE = {255, 255, 255, 255};
 
@@ -10,45 +12,7 @@ Mix_Chunk *deathSound;
 
 int main(void) {
   // Initialize SDL2
-  // Video
-  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-    fprintf(stderr, "SDL_Init has failed: %s\n", SDL_GetError());
-  }
-
-  // Fonts
-  if (TTF_Init() < 0) {
-    fprintf(stderr, "TTF_Init has failed: %s\n", TTF_GetError());
-  }
-
-  font = TTF_OpenFont("./assets/fonts/PixelifySans-VariableFont_wght.ttf", 24);
-  if (font == NULL) {
-    fprintf(stderr, "Failed to open font: %s\n", TTF_GetError());
-  }
-
-  // Audio
-  if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 1, 1024) < 0) {
-    fprintf(stderr, "SDL_Mixer has failed: %s\n", Mix_GetError());
-  }
-
-  // Play background music
-  music = Mix_LoadMUS("./assets/sounds/music.mp3");
-  if (music == NULL) {
-    fprintf(stderr, "Failed to load music: %s\n", Mix_GetError());
-  }
-  else if (Mix_PlayMusic(music, -1) < 0) {
-    fprintf(stderr, "Failed to play music: %s\n", Mix_GetError());
-  }
-
-  // Load Sound Effects
-  chompSound = Mix_LoadWAV("./assets/sounds/chomp.mp3");
-  if (chompSound == NULL) {
-    fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
-  }
-
-  deathSound = Mix_LoadWAV("./assets/sounds/death.mp3");
-  if (deathSound == NULL) {
-    fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
-  }
+  init();
 
   // Create window and renderer
   int windowWidth = GRID_ROW_SIZE * SNAKE_WIDTH;
@@ -68,6 +32,7 @@ int main(void) {
   enum game_modes game_mode;
   int sock_fd;
   startScreen(renderer, windowWidth, &game_mode, &sock_fd);
+  SDL_Delay(250);
 
 
 
@@ -164,22 +129,17 @@ int main(void) {
   return 0;
 }
 
-void refreshScreen(SDL_Renderer *renderer) {
-  SDL_SetRenderDrawColor(renderer, 148, 148, 184, 255);
-  SDL_RenderClear(renderer);
-}
 
 void startScreen(SDL_Renderer *renderer, int windowWidth, enum game_modes *game_mode, int *sock_fd) {
+  // Draw UI
   refreshScreen(renderer);
-
   drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "Press Any Key to Start!");
-
   SDL_RenderPresent(renderer);
 
+  // Handle input
   bool isReadyToStart = false;
   SDL_Event event;
   while (!isReadyToStart) {
-    // handle input
     while (SDL_PollEvent(&event) != 0) {
       if (event.type == SDL_QUIT) {
         SDL_Quit();
@@ -197,7 +157,7 @@ void startScreen(SDL_Renderer *renderer, int windowWidth, enum game_modes *game_
             break;
           case SDLK_j:  // join
             *game_mode = MultiPlayer;
-            joinLobby(sock_fd);
+            joinLobby(renderer, sock_fd);
             isReadyToStart = true;
             break;
         }
@@ -211,12 +171,13 @@ void startScreen(SDL_Renderer *renderer, int windowWidth, enum game_modes *game_
 
 void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
   // Create UI
-  ui_element *ui[10];
+  ui_element *ui[10] = {0};
   char *hosting = "Hosting Lobby";
   ui[0] = createUIText(renderer, font, COLOR_WHITE, 100, 100, &hosting);
+  drawUI(renderer, ui, 1);
 
   // Host server
-  *sock_fd = host(8080);
+  *sock_fd = host(PORT);
 
   bool isReadyToStart = false;
   bool isLobbyEmpty = true;
@@ -256,8 +217,57 @@ void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
   }
 }
 
-void joinLobby(int *sock_fd) {
-  *sock_fd = join("127.0.0.1", 8080);
+void joinLobby(SDL_Renderer *renderer, int *sock_fd) {
+  // Get Host IP
+  ui_element *ui[2] = {0};
+  char *promptText = "Enter Host:";
+  ui[0] = createUIText(renderer, font, COLOR_WHITE, 100, 100, (char **) &promptText);
+  drawUI(renderer, ui, 1);
+
+  SDL_StartTextInput();
+  char buffer[20] = {0};
+  char *buffer_ptr = buffer;
+  int idx = 0;
+  bool isStillTyping = true;
+  while (isStillTyping) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_TEXTINPUT && idx < 19) { // new character entered
+        strncpy(buffer + idx, event.text.text, 19 - idx);
+        int len = strlen(event.text.text);
+        if (idx + len < 19) {
+          idx += len;
+        }
+        else {
+          idx = 19;
+        }
+      }
+      else if (event.type == SDL_KEYDOWN) { // backspace
+        if (event.key.keysym.sym == SDLK_BACKSPACE && idx > 0) {
+          buffer[--idx] = '\0';
+        }
+        else if (event.key.keysym.sym == SDLK_RETURN) {  // enter
+          printf("hit\n");
+          buffer[idx] = '\0';
+          isStillTyping = false;
+        }
+      }
+    }
+
+    ui[1] = createUIText(renderer, font, COLOR_WHITE, 100, 200, &buffer_ptr);
+    drawUI(renderer, ui, 2);
+    destroyUIElement(ui[1]);
+
+    SDL_Delay(FRAME_INTERVAL);
+  }
+
+  destroyUIElement(ui[0]);
+  SDL_StopTextInput();
+  
+
+
+  // Join Host
+  *sock_fd = join(buffer, PORT);
 
   bool hostStarted = false;
   while (!hostStarted) {
@@ -317,5 +327,47 @@ void endScreen(SDL_Renderer *renderer, int windowWidth, int score) {
 
     // Cap Framerate
     SDL_Delay(floor(FRAME_INTERVAL));
+  }
+}
+
+void init() {
+  // Video
+  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    fprintf(stderr, "SDL_Init has failed: %s\n", SDL_GetError());
+  }
+
+  // Fonts
+  if (TTF_Init() < 0) {
+    fprintf(stderr, "TTF_Init has failed: %s\n", TTF_GetError());
+  }
+
+  font = TTF_OpenFont("./assets/fonts/PixelifySans-VariableFont_wght.ttf", 24);
+  if (font == NULL) {
+    fprintf(stderr, "Failed to open font: %s\n", TTF_GetError());
+  }
+
+  // Audio
+  if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 1, 1024) < 0) {
+    fprintf(stderr, "SDL_Mixer has failed: %s\n", Mix_GetError());
+  }
+
+  // Play background music
+  music = Mix_LoadMUS("./assets/sounds/music.mp3");
+  if (music == NULL) {
+    fprintf(stderr, "Failed to load music: %s\n", Mix_GetError());
+  }
+  else if (Mix_PlayMusic(music, -1) < 0) {
+    fprintf(stderr, "Failed to play music: %s\n", Mix_GetError());
+  }
+
+  // Load Sound Effects
+  chompSound = Mix_LoadWAV("./assets/sounds/chomp.mp3");
+  if (chompSound == NULL) {
+    fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
+  }
+
+  deathSound = Mix_LoadWAV("./assets/sounds/death.mp3");
+  if (deathSound == NULL) {
+    fprintf(stderr, "Failed to load sound: %s\n", Mix_GetError());
   }
 }

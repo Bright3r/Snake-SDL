@@ -20,10 +20,10 @@
 
 enum game_modes {SinglePlayer, MultiPlayer};
 
-void refreshScreen(SDL_Renderer *renderer);
+void init();
 void startScreen(SDL_Renderer *renderer, int windowWidth, enum game_modes *game_mode, int *sock_fd);
 void hostLobby(SDL_Renderer *renderer, int *sock_fd);
-void joinLobby(int *sock_fd);
+void joinLobby(SDL_Renderer *renderer, int *sock_fd);
 void drawScore(SDL_Renderer *renderer, int windowWidth, int score);
 void drawGrid(SDL_Renderer *renderer, int windowWidth);
 void endScreen(SDL_Renderer *renderer, int windowWidth, int score);
