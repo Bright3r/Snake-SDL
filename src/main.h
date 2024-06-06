@@ -18,10 +18,10 @@
 #define GRID_ROW_SIZE 20
 #define FRAME_INTERVAL 100.0f
 
-enum game_modes {SinglePlayer, MultiPlayer};
+enum game_modes {SinglePlayer, Host, Join};
 
 void init();
-void startScreen(SDL_Renderer *renderer, int windowWidth, enum game_modes *game_mode, int *sock_fd);
+enum game_modes startScreen(SDL_Renderer *renderer, int windowWidth);
 void hostLobby(SDL_Renderer *renderer, int *sock_fd);
 void joinLobby(SDL_Renderer *renderer, int *sock_fd);
 void drawScore(SDL_Renderer *renderer, int windowWidth, int score);

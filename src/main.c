@@ -27,14 +27,17 @@ int main(void) {
   }
 
 
-
   // Get game mode and join lobby if multiplayer
-  enum game_modes game_mode;
+  enum game_modes game_mode = startScreen(renderer, windowWidth);
+  
   int sock_fd;
-  startScreen(renderer, windowWidth, &game_mode, &sock_fd);
+  if (game_mode == Host) {
+    hostLobby(renderer, &sock_fd);
+  }
+  else if (game_mode == Join) {
+    joinLobby(renderer, &sock_fd);
+  }
   SDL_Delay(250);
-
-
 
 
   // Initialize game objects
@@ -130,16 +133,17 @@ int main(void) {
 }
 
 
-void startScreen(SDL_Renderer *renderer, int windowWidth, enum game_modes *game_mode, int *sock_fd) {
+enum game_modes startScreen(SDL_Renderer *renderer, int windowWidth) {
   // Draw UI
   refreshScreen(renderer);
-  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "Press Any Key to Start!");
+  drawText(renderer, font, COLOR_WHITE, windowWidth / 2, SNAKE_WIDTH * 2, "Press 's' for SinglePlayer, 'h' to host a lobby, or 'j' to join a lobby!");
   SDL_RenderPresent(renderer);
 
   // Handle input
-  bool isReadyToStart = false;
   SDL_Event event;
-  while (!isReadyToStart) {
+  bool isGameModePicked = false;
+  enum game_modes game_mode;
+  while (!isGameModePicked) {
     while (SDL_PollEvent(&event) != 0) {
       if (event.type == SDL_QUIT) {
         SDL_Quit();
@@ -147,18 +151,16 @@ void startScreen(SDL_Renderer *renderer, int windowWidth, enum game_modes *game_
       else if (event.type == SDL_KEYDOWN) {
         switch (event.key.keysym.sym) {
           case SDLK_s:  // singleplayer
-            *game_mode = SinglePlayer;
-            isReadyToStart = true;
+            game_mode = SinglePlayer;
+            isGameModePicked = true;
             break;
           case SDLK_h:  // host
-            *game_mode = MultiPlayer;
-            hostLobby(renderer, sock_fd);
-            isReadyToStart = true;
+            game_mode = Host;
+            isGameModePicked = true;
             break;
           case SDLK_j:  // join
-            *game_mode = MultiPlayer;
-            joinLobby(renderer, sock_fd);
-            isReadyToStart = true;
+            game_mode = Join;
+            isGameModePicked = true;
             break;
         }
       }
@@ -167,14 +169,22 @@ void startScreen(SDL_Renderer *renderer, int windowWidth, enum game_modes *game_
     // Cap Framerate
     SDL_Delay(floor(FRAME_INTERVAL));
   }
+
+  return game_mode;
 }
 
 void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
+  char *hostingText = "Hosting Lobby";
+  char playerJoinedText[150] = {0};
+  char *playerJoinedText_ptr = playerJoinedText;
+  char *directionsText = "Press Enter to start!";
+
   // Create UI
   ui_element *ui[10] = {0};
-  char *hosting = "Hosting Lobby";
-  ui[0] = createUIText(renderer, font, COLOR_WHITE, 100, 100, &hosting);
-  drawUI(renderer, ui, 1);
+  ui[0] = createUIText(renderer, font, COLOR_WHITE, 100, 100, &hostingText);
+
+  int numUIElements = 1;
+  drawUI(renderer, ui, numUIElements);
 
   // Host server
   *sock_fd = host(PORT);
@@ -190,8 +200,13 @@ void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
         printf("Player has left the lobby!\n");
       }
       else {
-        printf("%s has joined the lobby!\n", buffer);
+        sprintf(playerJoinedText, "%s has joined the lobby!", buffer);
+        ui[numUIElements++] = createUIText(renderer, font, COLOR_WHITE, 100, 200, &playerJoinedText_ptr);
+
+        ui[numUIElements++] = createUIText(renderer, font, COLOR_WHITE, 100, 300, &directionsText);
         isLobbyEmpty = false;
+
+        printf(playerJoinedText);
       }
     }
 
@@ -202,7 +217,7 @@ void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
       }
       else if (event.type == SDL_KEYDOWN) {
         switch (event.key.keysym.sym) {
-          case SDLK_s:  // singleplayer
+          case SDLK_RETURN:
             isReadyToStart = true;
             char *msg = "Starting";
             send(*sock_fd, msg, 9, 0);
@@ -212,8 +227,15 @@ void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
       }
     }
 
+    drawUI(renderer, ui, numUIElements);
+
     // Cap Framerate
     SDL_Delay(floor(FRAME_INTERVAL));
+  }
+
+  // Cleanup UI
+  for (int i = 0; i < numUIElements; i++) {
+    destroyUIElement(ui[i]);
   }
 }
 
@@ -221,7 +243,7 @@ void joinLobby(SDL_Renderer *renderer, int *sock_fd) {
   // Get Host IP
   ui_element *ui[2] = {0};
   char *promptText = "Enter Host:";
-  ui[0] = createUIText(renderer, font, COLOR_WHITE, 100, 100, (char **) &promptText);
+  ui[0] = createUIText(renderer, font, COLOR_WHITE, 100, 100, &promptText);
   drawUI(renderer, ui, 1);
 
   SDL_StartTextInput();
@@ -269,6 +291,14 @@ void joinLobby(SDL_Renderer *renderer, int *sock_fd) {
   // Join Host
   *sock_fd = join(buffer, PORT);
 
+
+
+  // Show player that lobby was joined
+  refreshScreen(renderer);
+  drawText(renderer, font, COLOR_WHITE, 200, 200, "Waiting for host to start!");
+  SDL_RenderPresent(renderer);
+
+  // Wait for host to start
   bool hostStarted = false;
   while (!hostStarted) {
     hostStarted = getLobbyStatus(*sock_fd);
