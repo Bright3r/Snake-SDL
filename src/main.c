@@ -474,8 +474,8 @@ enum end_screen_decisions gameLoop(SDL_Renderer *renderer, enum game_modes game_
 
     // Draw updated objects
     refreshScreen(renderer);
-    drawSnake(renderer, s);
     drawApple(renderer, app);
+    drawSnake(renderer, s);
     drawGrid(renderer);
     drawScore(renderer, score);
 
