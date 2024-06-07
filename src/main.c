@@ -490,7 +490,9 @@ enum end_screen_decisions gameLoop(SDL_Renderer *renderer, enum game_modes game_
   destroySnake(s);
   destroyApple(app);
 
-  pthread_join(*thread, NULL);
+  if (game_mode != SinglePlayer) {
+    pthread_join(*thread, NULL);
+  }
 
   return endScreen(renderer, score, game_mode, game_status);
 }
