@@ -1,5 +1,5 @@
 CFLAGS = -Wall -Wextra -pedantic -g
-LIBS = -lSDL2 -lSDL2_ttf -lSDL2_mixer -lm
+LIBS = -lSDL2 -lSDL2_ttf -lSDL2_mixer -lm -pthread
 SRC = ./src/main.c
 DEST = main
 
