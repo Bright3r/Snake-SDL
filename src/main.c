@@ -149,8 +149,6 @@ void hostLobby(SDL_Renderer *renderer, int *sock_fd) {
 
         ui[numUIElements++] = createUIText(renderer, font, COLOR_WHITE, getCenter(), SNAKE_WIDTH * (numUIElements + 1) * 2, &directionsText);
         isLobbyEmpty = false;
-
-        printf(playerJoinedText);
       }
     }
 
