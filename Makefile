@@ -7,4 +7,4 @@ all:
 	gcc $(CFLAGS) -o $(DEST) $(SRC) $(LIBS)
 
 clean:
-	rm -f ./main
+	rm -f $(DEST)
