@@ -9,12 +9,12 @@
 #include <stdbool.h>
 #include <string.h>
 #include <pthread.h>
-#include "./data-structures/queue.c"
-#include "./objs/apple.c"
-#include "./objs/snake.c"
-#include "ui.c"
-#include "network.c"
-#include "utils.c"
+#include "apple.h"
+#include "snake.h"
+#include "queue.h"
+#include "ui.h"
+#include "network.h"
+#include "utils.h"
 
 #define GRID_ROW_SIZE 20
 #define FRAME_INTERVAL 100.0f

@@ -1,10 +1,11 @@
-
 #ifndef SNAKE_H
 #define SNAKE_H
 
 #include <SDL2/SDL.h>
 #include <stdlib.h>
-#include "../utils.c"
+#include <stdbool.h>
+#include "utils.h"
+#include "queue.h"
 
 #define SNAKE_WIDTH 25
 

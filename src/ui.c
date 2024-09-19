@@ -1,17 +1,4 @@
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
-#include <stdlib.h>
-
-SDL_Color COLOR_BLACK = {0, 0, 0, 255};
-SDL_Color COLOR_WHITE = {255, 255, 255, 255};
-SDL_Color COLOR_BG = {148, 148, 184, 255};
-
-typedef struct ui_element {
-  SDL_Texture *texture;
-  SDL_Color color;
-  SDL_Rect dest;
-} ui_element;
+#include "ui.h"
 
 ui_element *createUIElement(SDL_Texture *texture, SDL_Color color, SDL_Rect dest) {
   ui_element *element = (ui_element *) malloc(sizeof(ui_element));

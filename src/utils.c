@@ -1,9 +1,4 @@
-
-#ifndef UTILS
-#define UTILS
-
-#include <stdlib.h>
-#include <stdbool.h>
+#include "utils.h"
 
 bool checkCollision(SDL_Rect *r1, SDL_Rect *r2) {
   // Axis Aligned Bounding Box
@@ -20,5 +15,3 @@ bool checkCollision(SDL_Rect *r1, SDL_Rect *r2) {
   // Otherwise there is a collision
   return true;
 }
-
-#endif

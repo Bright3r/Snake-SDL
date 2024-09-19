@@ -1,4 +1,3 @@
-
 #include "snake.h"
 
 snake *createSnake(int x, int y) {

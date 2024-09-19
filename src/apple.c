@@ -1,4 +1,3 @@
-
 #include "apple.h"
 
 apple *createApple(int gridRowSize, int snakeWidth) {

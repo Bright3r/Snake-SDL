@@ -1,18 +1,4 @@
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <pthread.h>
-
-enum game_stats {Won, Lost, Ongoing, NonCompetitive};
-
-typedef struct thread_args {
-  int sock_fd;
-  pthread_mutex_t *lock;
-  enum game_stats *game_status;
-} thread_args;
+#include "network.h"
 
 bool sendMessage(int sock_fd, char *msg) {
   if (send(sock_fd, msg, strlen(msg) + 1, 0) < 0) {

@@ -309,7 +309,11 @@ void init() {
     fprintf(stderr, "SDL_Mixer has failed: %s\n", Mix_GetError());
   }
 
-  // Play background music
+  // Set Volume
+  Mix_VolumeMusic(MIX_MAX_VOLUME * 0.2);
+  Mix_Volume(-1, MIX_MAX_VOLUME * 0.2);
+
+  // Play background Mix_PlayMusic
   music = Mix_LoadMUS("./assets/sounds/music.mp3");
   if (music == NULL) {
     fprintf(stderr, "Failed to load music: %s\n", Mix_GetError());

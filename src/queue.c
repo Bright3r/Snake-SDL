@@ -1,13 +1,4 @@
-
-#include <stdlib.h>
-#include "llist.c"
-
-
-typedef struct queue {
-  int size;
-  struct node *head;
-  struct node *tail;
-} queue;
+#include "queue.h"
 
 queue *createQueue() {
   queue *q = (queue *) malloc(sizeof(queue));

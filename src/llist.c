@@ -1,11 +1,4 @@
-
-
-#include <stdlib.h>
-
-struct node {
-  struct node *next;
-  void *data;
-};
+#include "llist.h"
 
 struct node *createNode(void *data) {
   struct node *curr = (struct node *) malloc(sizeof(struct node));
